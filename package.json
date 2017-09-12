@@ -1,0 +1,21 @@
+{
+  "name": "parsetx",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "cheerio": "^1.0.0-rc.2",
+    "cron": "^1.2.1",
+    "csv": "^1.1.1",
+    "line-reader": "^0.4.0",
+    "read-csv-json": "^1.1.0",
+    "request": "^2.81.0",
+    "sync-request": "^4.1.0"
+  }
+}
