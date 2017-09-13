@@ -10,6 +10,7 @@ var assert = require('assert');
 
 var badResFile = "./input/resFile0911-bk.txt";
 var goodResFile = "./input/compare0911.json";
+var imtokenFile = "./input/imtoken_tx.csv";
 
 async function parseCsvFile(fileName, lineParseFunc) {
   var res = [];
@@ -34,6 +35,10 @@ function parseResLine(line) {
       console.log("error:", err);
     }
   }
+}
+
+function parseImtokenTxLine(line) {
+
 }
 
 function arrToMap(arr) {

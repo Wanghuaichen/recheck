@@ -6,6 +6,8 @@ var fs = require('fs');
 var parse = require('csv-parse');
 var assert = require('assert');
 
+var utils = require("./utils.js");
+
 var icoFile = './input/ICO_Issue_events.csv';
 var overPaidFile = './input/resFile0911-amend-more.txt';
 
@@ -28,6 +30,9 @@ var ethPayCapMap = {};
 var refundAmountMap = {};
 var refundAddresses = [];
 var overPaidMap = new Map();
+
+var lrcRefundMap = new Map();
+var loopringAddr = '0x9952f869f12a7af92ab86b275cfa231c868aad23';
 
 var parseCsvFile = async function(fileName, lineParseFunc) {
   var data = fs.readFileSync(fileName, 'utf8');
@@ -136,6 +141,18 @@ var parseRefundLineArr = function(lineArr) {
   }
 }
 
+function addToLrcRefundMap(addr, lrcAmount) {
+  if (loopringAddr === addr) return;
+
+  if (lrcRefundMap.has(addr)) {
+    var total = lrcRefundMap.get(addr);
+    total += lrcAmount;
+    lrcRefundMap.set(addr, total);
+  } else {
+    lrcRefundMap.set(addr, lrcAmount);
+  }
+}
+
 var caculateEthAmountForRefundUser = function(addr, lrcAmount) {
   var _lrcAmount = lrcAmount;
   var buyTxArr = icoDataAll[addr];
@@ -153,11 +170,16 @@ var caculateEthAmountForRefundUser = function(addr, lrcAmount) {
         var price = txInfo['lrcAmount']/txInfo['ethAmount'];
         var _eth = _lrcAmount/price;
         ethAmountToPay += _eth;
+        _lrcAmount = 0;
         break;
       }
     }
   } else {
     console.log("address not found in ico tx.", addr);
+  }
+
+  if (_lrcAmount > 50) {
+    addToLrcRefundMap(addr, _lrcAmount);
   }
 
   var ethCap = ethPayCapMap[addr];
@@ -173,7 +195,7 @@ var caculateEthAmountForRefundUser = function(addr, lrcAmount) {
 
   var ethAmountOverPaid = overPaidMap[addr];
   if (ethAmountOverPaid) {
-    console.log("XXXXXXXXXX: over paid account found: " + addr + ", amount over paid:" + ethAmountOverPaid);
+    console.log("IMPORTANT: over paid account found: " + addr + ", amount over paid:" + ethAmountOverPaid);
     console.log("amount to pay: ", ethAmountToPay);
     ethAmountToPay -= ethAmountOverPaid;
   }
@@ -278,17 +300,16 @@ async function main() {
     parseCsvFile(paidTxFile0912, parsePaidTx),
     parseCsvFile(icoFile, parseICOFileLine),
     parseCsvFile(refundFile0912, parseRefundLineArr),
-    //parseCsvFile(overPaidFile, parseOverpaidFile)
   ]);
-
-  // let values = [...overPaidMap.values()];
-  // var sum = values.reduce((x, y) => x + y, 0);
-  // console.log('sum:', sum);
 
   sortIcoDataAll();
 
   var ethToPayMap = getRefundEthAmountMap();
   printParamsToFile(ethToPayMap);
+
+  utils.writeMapToCSVFile(lrcRefundMap, "./output/lrcRefund-0912.csv");
+  var lrcRefundTotal = [...lrcRefundMap.values()].reduce((a, b) => a + b, 0);
+  console.log("lrcRefundTotal:", lrcRefundTotal);
 }
 
 main();
