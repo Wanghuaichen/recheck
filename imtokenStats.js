@@ -3,9 +3,11 @@ var Promise = require('bluebird');
 var fs = require('fs');
 var parse = require('csv-parse');
 
-var paidTxFile = './input/0913/export-0x8668ef4534ec8716dede42807084a526ff4904e2.csv';
+var paidTxFile = './input/export-0x8668ef4534ec8716dede42807084a526ff4904e2-0915.csv';
 var imtokenIcoFile = './input/imtoken_tx.csv'
 var icoFile = './input/ICO_Issue_events.csv';
+
+var paidTxUuidSet = new Set();
 
 var parseCsvFile = async function(fileName, lineParseFunc) {
   var data = fs.readFileSync(fileName, 'utf8');
@@ -26,6 +28,12 @@ var parseCsvFile = async function(fileName, lineParseFunc) {
 function parsePaidTx(lineArr) {
   try {
     if (lineArr[5].substring(0, 2) == '0x') {
+      var uuid = lineArr[0] + lineArr[5] + lineArr[8];
+      if (paidTxUuidSet.has(uuid)) {
+        throw new Error("duplicated paid tx found!" + lineArr);
+      }
+      paidTxUuidSet.add(uuid);
+
       var txhash = lineArr[0].toLowerCase();
       var paidAddress = lineArr[5].toLowerCase();
       var paidAmount = Number(lineArr[8]);
@@ -127,7 +135,7 @@ function getImtokenRefundMap(paidAddrEthMap, imtokenAddrEthMap) {
         ethVal = paidEth;
       }
 
-      resMap.set(addr, ethVal);
+      resMap.set(addr, ethVal.toFixed(2));
     }
   }
   return resMap;
@@ -161,13 +169,13 @@ async function main() {
 
   var paidTotal = [...paidAddrEthMap.values()].reduce((a, b) => a + b, 0);
   var imtokenTotal = [...imtokenAddrEthMap.values()].reduce((a, b) => a + b, 0);
-  var imtokenRefundTotal = [...imtokenRefundMap.values()].reduce((a, b) => a + b, 0);
+  var imtokenRefundTotal = [...imtokenRefundMap.values()].reduce((a, b) => Number(a) + Number(b), 0);
 
   console.log("paidTotal:", paidTotal);
   console.log("imtokenTotal", imtokenTotal);
   console.log("imtokenRefundTotal:", imtokenRefundTotal);
 
-  writeMapToCSVFile(imtokenRefundMap, "./output/imtoken-refund-0912.csv");
+  writeMapToCSVFile(imtokenRefundMap, "./output/imtoken-refund-stats-0915.csv");
 }
 
 main();

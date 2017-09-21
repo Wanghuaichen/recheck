@@ -23,6 +23,12 @@ var refundFile0911 = './input/export-token-0xEF68e7C694F40c8202821eDF525dE378245
 var paidTxFile0912 = './input/0912/export-0x8668ef4534ec8716dede42807084a526ff4904e2.csv';
 var refundFile0912 = './input/0912/export-token-0xEF68e7C694F40c8202821eDF525dE3782458639f-0912.csv'
 
+var paidTxFile0913 = './input/0913/export-0x8668ef4534ec8716dede42807084a526ff4904e2.csv';
+var refundFile0913 = './input/0913/export-token-0xEF68e7C694F40c8202821eDF525dE3782458639f-0913.csv'
+
+var paidTxFile0914 = './input/0914/export-0x8668ef4534ec8716dede42807084a526ff4904e2-0914.csv';
+var refundFile0914 = './input/0914/export-token-0xEF68e7C694F40c8202821eDF525dE3782458639f-0914.csv'
+
 var ethPaidAll = {};
 var allIcoAddresses = [];
 var icoDataAll = {};
@@ -73,6 +79,7 @@ var parseICOFileLine = function(lineArr) {
   if(lineArr.length != 7) throw new Error("line lenght != 7 , line: " + lineArr);
   var userAddr = lineArr[1].toLowerCase();
 
+  // filter by channel. when channel != "", return.
   if (lineArr[6] && lineArr[6].trim().length > 0) {
     return;
   }
@@ -124,12 +131,15 @@ function sortIcoDataAll() {
   }
 }
 
-var printTxForChannel = function(channel) {
-
-}
-
 var parseRefundLineArr = function(lineArr) {
+  var selfAddr = "0x9952f869f12a7af92ab86b275cfa231c868aad23";
   var from = lineArr[4].toLowerCase();
+
+  if (selfAddr === from) {
+    console.log("send tx found. lineArr:", lineArr);
+    return;
+  }
+
   var amount = Number(lineArr[6]);
   if (from.substring(0, 2) == '0x') {
     if (refundAmountMap[from]) {
@@ -143,6 +153,7 @@ var parseRefundLineArr = function(lineArr) {
 
 function addToLrcRefundMap(addr, lrcAmount) {
   if (loopringAddr === addr) return;
+  lrcAmount = Math.floor(lrcAmount);
 
   if (lrcRefundMap.has(addr)) {
     var total = lrcRefundMap.get(addr);
@@ -211,22 +222,25 @@ var caculateEthAmountForRefundUser = function(addr, lrcAmount) {
 
 var getRefundEthAmountMap = function() {
   var res = new Map();
+  var ethTotal = 0;
   for (var i = 0; i < refundAddresses.length; i++) {
     var addr = refundAddresses[i];
     var lrcAmount = refundAmountMap[addr];
-    var ethWeiAmount = caculateEthAmountForRefundUser(addr, lrcAmount);
+    var ethAmount = caculateEthAmountForRefundUser(addr, lrcAmount);
 
-    if (ethWeiAmount) {
-      res.set(addr, ethWeiAmount);
+    if (ethAmount) {
+      res.set(addr, ethAmount);
+      ethTotal += ethAmount;
     }
   }
 
   console.log("res size: ", res.size);
+  console.log("eth total:", ethTotal);
   return res;
 }
 
 function printParamsToFile(resultMap) {
-  var resFile = "./output/resFile0912.txt"
+  var resFile = "./output/resFile0914.txt"
   fs.writeFileSync(resFile, "");
 
   var addressesSorted = [...resultMap.keys()].sort();
@@ -242,7 +256,7 @@ function printParamsToFile(resultMap) {
 
   var batchEthAmount = 0;
   var batchSize = Math.ceil(addressesSorted.length/100);
-  var paramsFile = "./output/paramsFile0912.txt";
+  var paramsFile = "./output/paramsFile0914.txt";
   fs.writeFileSync(paramsFile, "");
   for (var i = 0; i < batchSize; i ++) {
     var end = 100*(i+1);
@@ -297,17 +311,18 @@ function ethAmountToWei(amount) {
 
 async function main() {
   await Promise.all([
-    parseCsvFile(paidTxFile0912, parsePaidTx),
+    parseCsvFile(paidTxFile0914, parsePaidTx),
     parseCsvFile(icoFile, parseICOFileLine),
-    parseCsvFile(refundFile0912, parseRefundLineArr),
+    parseCsvFile(refundFile0914, parseRefundLineArr),
   ]);
 
   sortIcoDataAll();
 
   var ethToPayMap = getRefundEthAmountMap();
+  console.log(ethToPayMap);
   printParamsToFile(ethToPayMap);
 
-  utils.writeMapToCSVFile(lrcRefundMap, "./output/lrcRefund-0912.csv");
+  utils.writeMapToCSVFile(lrcRefundMap, "./output/lrcRefund-0914.csv");
   var lrcRefundTotal = [...lrcRefundMap.values()].reduce((a, b) => a + b, 0);
   console.log("lrcRefundTotal:", lrcRefundTotal);
 }
